@@ -16,10 +16,11 @@ out/
 .vscode/
 *.iml
 # Temporary files and build artifacts
-backend/temp/
-backend/api/routes/temp/
+# Temporary files and build artifacts
+temp/
+api/temp/
 *.tmp
-frontend/build/
+build/
 
 # Test coverage
 coverage/
