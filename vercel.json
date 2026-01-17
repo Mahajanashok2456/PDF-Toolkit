@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "installCommand": "npm install --production=false",
   "rewrites": [
     { "source": "/api/pdf-to-word", "destination": "/api/index.py" },
     { "source": "/api/(.*)", "destination": "/api/server.js" },
