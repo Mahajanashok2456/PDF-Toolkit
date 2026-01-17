@@ -6,8 +6,13 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/server.js": { "maxDuration": 30 },
-    "api/index.py": { "maxDuration": 60 }
+    "api/server.js": {
+      "maxDuration": 30,
+      "includeFiles": "server-src/**"
+    },
+    "api/index.py": {
+      "maxDuration": 60
+    }
   },
   "env": {
     "NODE_ENV": "production"
