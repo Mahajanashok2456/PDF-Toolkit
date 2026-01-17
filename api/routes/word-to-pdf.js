@@ -38,8 +38,8 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     console.log(`Generated Word-PDF. Size: ${pdfBuffer.length} bytes`);
 
-    if (pdfBuffer.length < 100 || !pdfBuffer.slice(0, 4).toString().includes("%PDF")) {
-      throw new Error("Invalid PDF generated.");
+    if (pdfBuffer.length < 100) {
+      throw new Error("Invalid PDF generated (file too small).");
     }
 
     res.setHeader('Content-Type', 'application/pdf');

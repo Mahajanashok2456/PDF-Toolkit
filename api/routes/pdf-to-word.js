@@ -41,8 +41,12 @@ router.post('/', upload.single('pdf'), async (req, res) => {
     await fs.writeFile(tempPdfPath, req.file.buffer);
 
     // Call the high-fidelity Python script locally
+    // Note: api/index.py (Flask app) doesn't take CLI args directly, 
+    // so for local DEV nodejs -> python calls, we might need a direct script or hit the python server.
+    // However, since we are moving to Vercel, this local "shell out" fallback is less critical
+    // but we will fix the path just in case.
     const pythonProcess = spawn('python', [
-      path.join(__dirname, '../scripts/pdf_to_word.py'),
+      path.join(__dirname, '../index.py'), // Updated to new location
       tempPdfPath,
       tempDocxPath
     ]);

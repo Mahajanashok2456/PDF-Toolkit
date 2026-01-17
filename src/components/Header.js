@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import GooeyNav from "./GooeyNav";
-import { FaChevronDown } from "react-icons/fa";
+import { FaChevronDown, FaBars, FaTimes } from "react-icons/fa";
 
 const Header = () => {
   const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleScrollToTop = () => {
     window.scrollTo(0, 0);
+    setIsMobileMenuOpen(false);
+    setIsToolsDropdownOpen(false);
   };
 
   const navItems = [
@@ -37,8 +40,13 @@ const Header = () => {
     { name: "Protect PDF", path: "/pdf-security" },
   ];
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+    setIsToolsDropdownOpen(false); 
+  };
+
   return (
-    <header className="sticky top-0 z-50 bg-modern-calm-ink-black">
+    <header className="sticky top-0 z-50 bg-modern-calm-ink-black border-b border-modern-calm-dusk-blue/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex justify-between items-center">
           {/* Logo */}
@@ -50,8 +58,8 @@ const Header = () => {
             PDF Toolkit
           </Link>
 
-          {/* Navigation Container */}
-          <div className="flex items-center gap-8">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-8">
             {/* GooeyNav */}
             <GooeyNav
               items={navItems}
@@ -82,26 +90,85 @@ const Header = () => {
                     onClick={() => setIsToolsDropdownOpen(false)}
                   />
                   <div className="absolute top-full right-0 mt-1 w-64 bg-modern-calm-prussian-blue rounded-lg shadow-lg border border-modern-calm-dusk-blue py-2 z-50">
-                    {tools.map((tool) => (
-                      <Link
-                        key={tool.path}
-                        to={tool.path}
-                        onClick={() => {
-                          setIsToolsDropdownOpen(false);
-                          handleScrollToTop();
-                        }}
-                        className="block px-4 py-2 text-sm text-modern-calm-alabaster-grey hover:bg-modern-calm-dusk-blue hover:text-white transition-colors"
-                      >
-                        {tool.name}
-                      </Link>
-                    ))}
+                    <div className="max-h-[80vh] overflow-y-auto custom-scrollbar">
+                      {tools.map((tool) => (
+                        <Link
+                          key={tool.path}
+                          to={tool.path}
+                          onClick={() => {
+                            setIsToolsDropdownOpen(false);
+                            handleScrollToTop();
+                          }}
+                          className="block px-4 py-2 text-sm text-modern-calm-alabaster-grey hover:bg-modern-calm-dusk-blue hover:text-white transition-colors"
+                        >
+                          {tool.name}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
             </div>
           </div>
+
+          {/* Mobile Menu Toggle */}
+          <div className="md:hidden">
+            <button
+              onClick={toggleMobileMenu}
+              className="text-modern-calm-alabaster-grey hover:text-white focus:outline-none p-2"
+            >
+              {isMobileMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 w-full bg-modern-calm-ink-black border-t border-modern-calm-dusk-blue shadow-xl z-50 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-col px-4 py-6 space-y-4">
+            {navItems.map((item, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  if (item.onClick) item.onClick();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="text-left text-lg font-medium text-modern-calm-alabaster-grey hover:text-white transition-colors border-b border-modern-calm-dusk-blue/30 pb-2"
+              >
+                {item.label}
+              </button>
+            ))}
+
+            {/* Mobile Tools Dropdown */}
+            <div className="border-b border-modern-calm-dusk-blue/30 pb-2">
+              <button
+                onClick={() => setIsToolsDropdownOpen(!isToolsDropdownOpen)}
+                className="flex items-center justify-between w-full text-lg font-medium text-modern-calm-alabaster-grey hover:text-white transition-colors"
+              >
+                Tools
+                <FaChevronDown
+                  className={`ml-1 text-xs transition-transform ${isToolsDropdownOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {isToolsDropdownOpen && (
+                <div className="mt-2 ml-4 flex flex-col space-y-2 border-l-2 border-modern-calm-dusk-blue pl-4 py-2">
+                  {tools.map((tool) => (
+                    <Link
+                      key={tool.path}
+                      to={tool.path}
+                      onClick={handleScrollToTop}
+                      className="text-base text-modern-calm-dusty-denim hover:text-white transition-colors"
+                    >
+                      {tool.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };
