@@ -5,7 +5,7 @@
   "description": "Unified PDF Toolkit with React Frontend and Node.js/Python Backend",
   "main": "api/server.js",
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "dependencies": {
     "@sentry/node": "^7.114.0",
