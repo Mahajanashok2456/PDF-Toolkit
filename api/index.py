@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
 from pdf2docx import Converter
 import os
@@ -7,6 +7,10 @@ import uuid
 
 app = Flask(__name__)
 CORS(app)
+
+@app.route('/', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy", "service": "pdf-to-word-python"})
 
 @app.route('/api/pdf-to-word', methods=['POST'])
 def convert_pdf_to_word():
@@ -47,8 +51,6 @@ def convert_pdf_to_word():
         if os.path.exists(input_path):
             os.remove(input_path)
 
-# Vercel looks for 'app' by default in index.py for Flask
-app = app
-
+# Vercel needs this "app" variable exposed
 if __name__ == '__main__':
     app.run(port=3002)
