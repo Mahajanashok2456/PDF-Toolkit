@@ -1,8 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/index.js": { "maxDuration": 30 },
-    "api/convert_pdf.py": { "maxDuration": 60 }
+    "api/index.js": { "maxDuration": 30 }
   },
   "rewrites": [
     { "source": "/api/pdf-to-word", "destination": "/api/convert_pdf.py" }
