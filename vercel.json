@@ -1,12 +1,7 @@
 {
-  "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
-  "installCommand": "npm install --production=false",
   "rewrites": [
     { "source": "/api/pdf-to-word", "destination": "/api/index.py" },
-    { "source": "/api/(.*)", "destination": "/api/server.js" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "/api/server.js" }
   ],
   "functions": {
     "api/server.js": {
@@ -17,8 +12,9 @@
       "maxDuration": 60
     }
   },
-  "env": {
-    "NODE_ENV": "production",
-    "CI": "false"
+  "build": {
+    "env": {
+      "CI": "false"
+    }
   }
 }
