@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
 const fs = require("fs-extra");
+const os = require("os");
 const { v4: uuidv4 } = require("uuid");
 const Sentry = require("@sentry/node");
 
@@ -59,7 +60,8 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // Temporary directory for file processing
-const tempDir = path.join(__dirname, "temp");
+// Vercel only allows writing to /tmp
+const tempDir = path.join(os.tmpdir(), "pdf-toolkit-temp");
 fs.ensureDirSync(tempDir);
 
 // Routes
