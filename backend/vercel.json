@@ -5,7 +5,7 @@
     "api/*.py": { "maxDuration": 60 }
   },
   "rewrites": [
-    { "source": "/api/pdf-to-word", "destination": "/api/pdf_to_word_python.py" }
+    { "source": "/api/pdf-to-word", "destination": "/api/pdf-to-word.py" }
   ],
   "env": {
     "NODE_ENV": "production"
