@@ -1,13 +1,13 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/pdf-to-word", "destination": "/api/python/index.py" },
+    { "source": "/api/pdf-to-word", "destination": "/api/index.py" },
     { "source": "/api/(.*)", "destination": "/api/server.js" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/server.js": { "maxDuration": 30 },
-    "api/python/index.py": { "maxDuration": 60 }
+    "api/index.py": { "maxDuration": 60 }
   },
   "env": {
     "NODE_ENV": "production"
