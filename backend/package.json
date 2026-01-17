@@ -2,11 +2,10 @@
   "name": "pdf-tools-backend",
   "version": "1.0.0",
   "description": "Backend API for PDF Toolkit with Express and Vercel Functions",
-  "main": "api/index.js",
+  "main": "api/server.js",
   "scripts": {
-    "dev": "node api/index.js",
-    "build": "vercel build",
-    "start": "node api/index.js",
+    "dev": "node api/server.js",
+    "start": "node api/server.js",
     "test": "mocha api/**/*.test.js --exit"
   },
   "dependencies": {
