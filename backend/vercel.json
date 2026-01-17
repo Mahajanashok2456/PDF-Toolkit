@@ -2,10 +2,10 @@
   "version": 2,
   "functions": {
     "api/index.js": { "maxDuration": 30 },
-    "api/main.py": { "maxDuration": 60 }
+    "api/convert.py": { "maxDuration": 60 }
   },
   "rewrites": [
-    { "source": "/api/pdf-to-word", "destination": "/api/main.py" }
+    { "source": "/api/pdf-to-word", "destination": "/api/convert.py" }
   ],
   "env": {
     "NODE_ENV": "production"
