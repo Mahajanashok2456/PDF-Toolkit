@@ -7,7 +7,6 @@
   "rewrites": [
     { "source": "/api/pdf-to-word", "destination": "/api/pdf_to_word_python.py" }
   ],
-  "regions": ["all"],
   "env": {
     "NODE_ENV": "production"
   },
