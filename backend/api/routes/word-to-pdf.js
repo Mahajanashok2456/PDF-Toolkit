@@ -1,95 +1,61 @@
 const express = require('express');
 const multer = require('multer');
 const mammoth = require('mammoth');
-const puppeteer = require('puppeteer');
-const fs = require('fs-extra');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 const Sentry = require('@sentry/node');
+const { getBrowser } = require("../utils/browserLauncher");
 
 const router = express.Router();
 
-// Configure multer with file validation
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.originalname.endsWith('.docx')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only .docx files are allowed'), false);
-    }
-  }
+  limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// Custom error class for better error handling
-class PDFProcessingError extends Error {
-  constructor(message, statusCode = 500) {
-    super(message);
-    this.statusCode = statusCode;
-    this.name = 'PDFProcessingError';
-  }
-}
-
-// Helper function to delete temp files
-const deleteTempFiles = (files) => {
-  files.forEach(file => {
-    if (file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
-  });
-};
-
-// Convert WORD to PDF endpoint
 router.post('/', upload.single('file'), async (req, res) => {
   let browser;
   try {
-    if (!req.file) {
-      throw new PDFProcessingError('Word file is required', 400);
-    }
+    if (!req.file) return res.status(400).json({ error: "File required" });
 
-    if (req.file.size > 50 * 1024 * 1024) {
-      throw new PDFProcessingError('File size exceeds 50MB limit', 413);
-    }
+    const result = await mammoth.convertToHtml({ buffer: req.file.buffer });
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="padding:40px; font-family:sans-serif;">${result.value}</body></html>`;
 
-    const docxBuffer = req.file.buffer;
-    let html;
-    try {
-      const result = await mammoth.convertToHtml({ buffer: docxBuffer });
-      html = result.value;
-    } catch (error) {
-      throw new PDFProcessingError('Failed to convert Word to HTML', 400);
-    }
-
-    if (!html || html.trim().length === 0) {
-      throw new PDFProcessingError('Word document contains no content', 422);
-    }
-
-    // Launch Puppeteer
-    browser = await puppeteer.launch();
+    browser = await getBrowser();
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    
+    await page.setContent(html, { 
+      waitUntil: "load", 
+      timeout: 30000 
+    });
 
-    const pdfBuffer = await page.pdf({ format: 'A4' });
+    await new Promise(r => setTimeout(r, 500));
 
-    // Set response headers for download
+    const pdfBuffer = await page.pdf({ 
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+    });
+
+    console.log(`Generated Word-PDF. Size: ${pdfBuffer.length} bytes`);
+
+    if (pdfBuffer.length < 100 || !pdfBuffer.slice(0, 4).toString().includes("%PDF")) {
+      throw new Error("Invalid PDF generated.");
+    }
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="converted.pdf"');
-    res.send(pdfBuffer);
+    res.send(Buffer.from(pdfBuffer));
 
-    // Clean up: files are in memory, no temp files to delete
   } catch (error) {
-    Sentry.captureException(error);
-    console.error('Error converting WORD to PDF:', error);
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({
-      error: error.message || 'Failed to convert WORD to PDF',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error("Conversion Error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || "Failed to convert Word to PDF." });
+    }
   } finally {
     if (browser) {
-      await browser.close();
+      try {
+        await browser.close();
+      } catch (e) {}
     }
   }
 });

@@ -1,0 +1,146 @@
+/* Rating Widget Styles */
+.rating-widget {
+  background: linear-gradient(135deg, #2a3f5f 0%, #1f2e42 100%);
+  border: 1px solid #3a5f8a;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 400px;
+  margin: 20px auto;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.rating-title {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #e8e9ed;
+  text-align: center;
+}
+
+.rating-success {
+  background-color: #2d5a3d;
+  border: 1px solid #4a8a5f;
+  color: #a8d5a8;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.rating-error {
+  background-color: #5a2d2d;
+  border: 1px solid #8a4a4a;
+  color: #d5a8a8;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.rating-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.rating-stars {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.star {
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #556b82;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.star:hover {
+  color: #fbbf24;
+  transform: scale(1.2);
+}
+
+.star.active {
+  color: #fbbf24;
+}
+
+.rating-feedback {
+  background-color: #1a2e42;
+  border: 1px solid #3a5f8a;
+  color: #e8e9ed;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 60px;
+  max-height: 100px;
+}
+
+.rating-feedback::placeholder {
+  color: #7a8fa3;
+}
+
+.rating-feedback:focus {
+  outline: none;
+  border-color: #5a8fc9;
+  box-shadow: 0 0 0 2px rgba(90, 143, 201, 0.1);
+}
+
+.rating-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rating-submit {
+  background: linear-gradient(135deg, #3a7fd3 0%, #2a5fa8 100%);
+  color: #e8e9ed;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.rating-submit:hover {
+  background: linear-gradient(135deg, #4a8fe3 0%, #3a6fb8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(58, 127, 211, 0.3);
+}
+
+.rating-submit:active {
+  transform: translateY(0);
+}
+
+.rating-help {
+  display: block;
+  font-size: 12px;
+  color: #7a8fa3;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .rating-widget {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .star {
+    font-size: 24px;
+  }
+
+  .rating-title {
+    font-size: 16px;
+  }
+}

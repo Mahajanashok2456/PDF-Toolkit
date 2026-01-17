@@ -1,135 +1,76 @@
 const express = require('express');
 const multer = require('multer');
-const pdfParse = require('pdf-parse');
 const fs = require('fs-extra');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { spawn } = require('child_process');
 const Sentry = require('@sentry/node');
-const { Document, Paragraph, Packer, TextRun } = require('docx');
 
 const router = express.Router();
 
-// Configure multer with file validation
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF files are allowed'), false);
-    }
-  }
+  limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// Custom error class for better error handling
-class PDFProcessingError extends Error {
-  constructor(message, statusCode = 500) {
-    super(message);
-    this.statusCode = statusCode;
-    this.name = 'PDFProcessingError';
-  }
-}
-
-// Helper function to delete temp files
-const deleteTempFiles = (files) => {
-  files.forEach(file => {
-    if (file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
-  });
-};
-
-// Convert PDF to Word endpoint
-const { spawn } = require('child_process');
-
-// Convert PDF to Word endpoint
+// Conversion endpoint
 router.post('/', upload.single('pdf'), async (req, res) => {
+  // In Production (Vercel), requests are routed to api/pdf_to_word_python.py via vercel.json rewrites.
+  // This JS handler is only used for LOCAL development or as a fallback.
+  
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(500).json({ error: "Routing error: This request should have been handled by the Python worker." });
+  }
+
   let tempPdfPath = null;
   let tempDocxPath = null;
 
   try {
     if (!req.file) {
-      throw new PDFProcessingError('PDF file is required', 400);
+      return res.status(400).json({ error: 'PDF file is required' });
     }
 
-    if (req.file.size > 50 * 1024 * 1024) {
-      throw new PDFProcessingError('File size exceeds 50MB limit', 413);
-    }
-
-    // Create unique temp paths
     const uniqueId = uuidv4();
-    tempPdfPath = path.join(__dirname, `../temp/input-${uniqueId}.pdf`);
-    tempDocxPath = path.join(__dirname, `../temp/output-${uniqueId}.docx`);
+    const tempDir = path.join(__dirname, '../temp');
+    await fs.ensureDir(tempDir);
     
-    // Ensure temp dir exists
-    await fs.ensureDir(path.dirname(tempPdfPath));
-
-    // Write buffer to disk so Python can read it
+    tempPdfPath = path.join(tempDir, `input-${uniqueId}.pdf`);
+    tempDocxPath = path.join(tempDir, `output-${uniqueId}.docx`);
+    
     await fs.writeFile(tempPdfPath, req.file.buffer);
 
-    // Spawn Python process
+    // Call the high-fidelity Python script locally
     const pythonProcess = spawn('python', [
       path.join(__dirname, '../scripts/pdf_to_word.py'),
       tempPdfPath,
       tempDocxPath
     ]);
 
-    // Handle process events
     await new Promise((resolve, reject) => {
-      let stderrData = '';
-
-      pythonProcess.stderr.on('data', (data) => {
-        stderrData += data.toString();
-      });
-
+      let stderr = '';
+      pythonProcess.stderr.on('data', (data) => stderr += data.toString());
       pythonProcess.on('close', (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`Conversion failed (Exit code ${code}): ${stderrData}`));
-        }
-      });
-
-      pythonProcess.on('error', (err) => {
-        reject(new Error(`Failed to start conversion process: ${err.message}`));
+        if (code === 0) resolve();
+        else reject(new Error(`Python conversion failed: ${stderr}`));
       });
     });
 
-    // Check if output file exists
-    if (!await fs.pathExists(tempDocxPath)) {
-      throw new Error('Output file was not created by conversion script');
-    }
-
-    // Read generated file
     const docxBuffer = await fs.readFile(tempDocxPath);
 
-    // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename="converted.docx"');
     res.send(docxBuffer);
 
   } catch (error) {
     Sentry.captureException(error);
-    console.error('Error converting PDF to Word:', error);
-    const statusCode = error.statusCode || 500;
-    res.status(statusCode).json({
-      error: error.message || 'Failed to convert PDF to Word',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error('Error during local PDF to Word conversion:', error);
+    res.status(500).json({ error: error.message || 'Failed to convert PDF to Word locally' });
   } finally {
-    // Cleanup files
     try {
-      if (tempPdfPath && await fs.pathExists(tempPdfPath)) {
-        await fs.unlink(tempPdfPath);
-      }
-      if (tempDocxPath && await fs.pathExists(tempDocxPath)) {
-        await fs.unlink(tempDocxPath);
-      }
-    } catch (cleanupError) {
-      console.error('Error cleaning up temp files:', cleanupError);
-    }
+      if (tempPdfPath) await fs.remove(tempPdfPath);
+      if (tempDocxPath) await fs.remove(tempDocxPath);
+    } catch (e) {}
   }
 });
 

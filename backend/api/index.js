@@ -1,3 +1,4 @@
+require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -10,18 +11,21 @@ const Sentry = require("@sentry/node");
 // Import route handlers
 const mergeRoutes = require("./routes/merge");
 const splitRoutes = require("./routes/split");
-const convertRoutes = require("./routes/convert");
 const pdfToWordRoutes = require("./routes/pdf-to-word");
 const rotateRoutes = require("./routes/rotate");
 const removePagesRoutes = require("./routes/remove-pages");
 const extractPagesRoutes = require("./routes/extract-pages");
-const organizePdfRoutes = require("./routes/organize-pdf");
 const jpgToPdfRoutes = require("./routes/jpg-to-pdf");
 const wordToPdfRoutes = require("./routes/word-to-pdf");
 const htmlToPdfRoutes = require("./routes/html-to-pdf");
 const protectPdfRoutes = require("./routes/protect-pdf");
+const ratingsRoutes = require("./routes/ratings");
+const connectDB = require("./config/db");
 
 const app = express();
+
+// Connect to Database
+connectDB();
 
 // Initialize Sentry
 Sentry.init({
@@ -61,16 +65,15 @@ fs.ensureDirSync(tempDir);
 // Routes
 app.use("/api/merge", mergeRoutes);
 app.use("/api/split", splitRoutes);
-app.use("/api/convert", convertRoutes);
 app.use("/api/pdf-to-word", pdfToWordRoutes);
 app.use("/api/rotate", rotateRoutes);
 app.use("/api/remove-pages", removePagesRoutes);
 app.use("/api/extract-pages", extractPagesRoutes);
-app.use("/api/organize-pdf", organizePdfRoutes);
 app.use("/api/jpg-to-pdf", jpgToPdfRoutes);
 app.use("/api/word-to-pdf", wordToPdfRoutes);
 app.use("/api/html-to-pdf", htmlToPdfRoutes);
 app.use("/api/protect-pdf", protectPdfRoutes);
+app.use("/api/ratings", ratingsRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
