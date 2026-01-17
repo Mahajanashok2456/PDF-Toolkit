@@ -1,0 +1,47 @@
+{
+  "name": "pdf-tools-backend",
+  "version": "1.0.0",
+  "description": "Backend API for PDF Toolkit with Express and Vercel Functions",
+  "main": "api/index.js",
+  "scripts": {
+    "dev": "node api/index.js",
+    "build": "vercel build",
+    "start": "node api/index.js",
+    "test": "mocha api/**/*.test.js --exit"
+  },
+  "dependencies": {
+    "@sentry/node": "^7.114.0",
+    "cors": "^2.8.5",
+    "diff": "^8.0.3",
+    "docx": "^8.5.0",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "fs-extra": "^11.1.1",
+    "helmet": "^7.1.0",
+    "mammoth": "^1.6.0",
+    "multer": "^1.4.5-lts.1",
+    "path": "^0.12.7",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    "pdf-table-extractor": "^1.0.3",
+    "pdf2pic": "^3.1.1",
+    "pdfkit": "^0.15.0",
+    "pptxgenjs": "^4.0.1",
+    "puppeteer": "^21.0.0",
+    "sharp": "^0.33.4",
+    "tesseract.js": "^5.0.4",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "proxyquire": "^2.1.3",
+    "sinon": "^21.0.1",
+    "supertest": "^6.3.3",
+    "vercel": "^32.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
