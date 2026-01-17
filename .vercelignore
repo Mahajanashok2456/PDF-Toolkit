@@ -7,9 +7,7 @@ __pycache__
 dist
 build
 coverage
-frontend
-public
-models
+server-src/models
 *.pdf
 *.zip
 *.tar
