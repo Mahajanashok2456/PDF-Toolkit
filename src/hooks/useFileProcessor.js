@@ -87,7 +87,11 @@ const useFileProcessor = () => {
     }
 
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:3001";
+      const apiUrl =
+        process.env.REACT_APP_API_URL ||
+        (window.location.hostname === "localhost"
+          ? "http://localhost:3001"
+          : "");
       const response = await fetch(`${apiUrl}/api/${selectedTool}`, {
         method: "POST",
         body: formData,

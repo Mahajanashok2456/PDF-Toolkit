@@ -1,7 +1,9 @@
 // Rating system to collect and calculate real user ratings
 // Now connects to backend MongoDB API
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3001";
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  (window.location.hostname === "localhost" ? "http://localhost:3001" : "");
 const RATINGS_STORAGE_KEY = "pdfToolkit_ratings_local"; // Still keep for UX (limit 1 rating per user)
 const MIN_RATINGS_TO_DISPLAY = 5;
 
