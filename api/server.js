@@ -10,18 +10,18 @@ const { v4: uuidv4 } = require("uuid");
 const Sentry = require("@sentry/node");
 
 // Import route handlers
-const mergeRoutes = require("./routes/merge");
-const splitRoutes = require("./routes/split");
-const pdfToWordRoutes = require("./routes/pdf-to-word");
-const rotateRoutes = require("./routes/rotate");
-const removePagesRoutes = require("./routes/remove-pages");
-const extractPagesRoutes = require("./routes/extract-pages");
-const jpgToPdfRoutes = require("./routes/jpg-to-pdf");
-const wordToPdfRoutes = require("./routes/word-to-pdf");
-const htmlToPdfRoutes = require("./routes/html-to-pdf");
-const protectPdfRoutes = require("./routes/protect-pdf");
-const ratingsRoutes = require("./routes/ratings");
-const connectDB = require("./config/db");
+const mergeRoutes = require("../server-src/routes/merge");
+const splitRoutes = require("../server-src/routes/split");
+const pdfToWordRoutes = require("../server-src/routes/pdf-to-word");
+const rotateRoutes = require("../server-src/routes/rotate");
+const removePagesRoutes = require("../server-src/routes/remove-pages");
+const extractPagesRoutes = require("../server-src/routes/extract-pages");
+const jpgToPdfRoutes = require("../server-src/routes/jpg-to-pdf");
+const wordToPdfRoutes = require("../server-src/routes/word-to-pdf");
+const htmlToPdfRoutes = require("../server-src/routes/html-to-pdf");
+const protectPdfRoutes = require("../server-src/routes/protect-pdf");
+const ratingsRoutes = require("../server-src/routes/ratings");
+const connectDB = require("../server-src/config/db");
 
 const app = express();
 

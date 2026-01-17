@@ -5,8 +5,9 @@
   "description": "Unified PDF Toolkit with React Frontend and Node.js/Python Backend",
   "main": "api/server.js",
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
+
   "dependencies": {
     "@sentry/node": "^7.114.0",
     "@sentry/react": "^10.0.0",
@@ -34,7 +35,6 @@
     "pdf2pic": "^3.1.1",
     "pdfkit": "^0.15.0",
     "pptxgenjs": "^4.0.1",
-    "puppeteer": "^24.35.0",
     "puppeteer-core": "^24.35.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -45,32 +45,16 @@
     "uuid": "^9.0.1",
     "web-vitals": "^5.1.0"
   },
+
   "scripts": {
     "start": "react-scripts start",
-    "build": "CI=false react-scripts build",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "dev": "node api/server.js",
     "api-test": "mocha api/**/*.test.js --exit"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
+
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -82,9 +66,38 @@
     "mocha": "^10.2.0",
     "postcss": "^8.5.6",
     "proxyquire": "^2.1.3",
+    "puppeteer": "^24.35.0",          // stays in devDependencies only
     "react-router-dom": "^6.30.3",
     "sinon": "^21.0.1",
     "supertest": "^6.3.3",
     "vercel": "^32.5.0"
+  },
+
+  "overrides": {
+    "webpack": "5.88.2"
+  },
+
+  "resolutions": {
+    "**/webpack": "5.88.2"
+  },
+
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
