@@ -47,8 +47,9 @@ def convert_pdf_to_word():
         if os.path.exists(input_path):
             os.remove(input_path)
 
-# Vercel looks for 'app' by default in index.py for Flask
-app = app
+# This allows Vercel to treat this as a serverless function
+def handler(event, context):
+    return app(event, context)
 
 if __name__ == '__main__':
     app.run(port=3002)
