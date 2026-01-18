@@ -42,12 +42,6 @@ const ConvertPage = () => {
           multiple: true,
           instruction: "Upload Images to Convert to PDF",
         };
-      } else if (convertOption === "word-to-pdf") {
-        return {
-          accept: ".doc,.docx",
-          multiple: false,
-          instruction: "Upload Word Document to Convert to PDF",
-        };
       }
     }
     return {
@@ -108,7 +102,6 @@ const ConvertPage = () => {
               >
                 <option value="pdf-to-word">PDF to Word</option>
                 <option value="jpg-to-pdf">JPG to PDF</option>
-                <option value="word-to-pdf">Word to PDF</option>
               </select>
             </div>
 

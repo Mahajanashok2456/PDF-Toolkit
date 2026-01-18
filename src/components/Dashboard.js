@@ -63,13 +63,6 @@ const Dashboard = () => {
       description: "Transform images into PDF format",
       path: "/convert-pdf?tool=jpg-to-pdf",
     },
-    {
-      name: "WORD to PDF",
-      value: "word-to-pdf",
-      category: "Convert PDF",
-      description: "Convert Word documents to PDF",
-      path: "/convert-pdf?tool=word-to-pdf",
-    },
 
     // PDF Security
     {
