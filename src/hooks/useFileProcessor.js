@@ -1,5 +1,4 @@
 import { useState } from "react";
-import * as Sentry from "@sentry/react";
 
 const useFileProcessor = () => {
   const [processing, setProcessing] = useState(false);
@@ -89,7 +88,7 @@ const useFileProcessor = () => {
         process.env.REACT_APP_API_URL ||
         (window.location.hostname === "localhost"
           ? "http://localhost:3001"
-          : "");
+          : window.location.origin);
 
       const response = await fetch(`${apiUrl}/api/${selectedTool}`, {
         method: "POST",
@@ -140,7 +139,6 @@ const useFileProcessor = () => {
         });
       }
     } catch (error) {
-      Sentry.captureException(error);
       console.error("Error processing files:", error);
       setError(error.message || "Error processing files. Please try again.");
     } finally {
