@@ -7,7 +7,7 @@ const app = express();
 
 // Middleware
 app.use(express.json({ limit: "50mb" }));
-app.use(express.static(path.join(__dirname, "../build")));
+app.use(express.static(path.join(__dirname, "build")));
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -88,7 +88,7 @@ app.post("/api/rotate", upload.single("pdf"), async (req, res) => {
 
 // Serve React app
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../build/index.html"));
+  res.sendFile(path.join(__dirname, "build/index.html"));
 });
 
 const PORT = process.env.PORT || 3001;
