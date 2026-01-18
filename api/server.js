@@ -76,10 +76,9 @@ app.post("/api/split", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// Disabled routes
+// Disabled routes - now handled by separate functions
 const disabledRoutes = [
-  "pdf-to-word", "rotate", "remove-pages", "extract-pages", 
-  "jpg-to-pdf", "word-to-pdf", "protect-pdf"
+  "jpg-to-pdf", "word-to-pdf"
 ];
 
 disabledRoutes.forEach(route => {
