@@ -4,10 +4,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path = require("path");
-const fs = require("fs-extra");
 const os = require("os");
 const { v4: uuidv4 } = require("uuid");
-const Sentry = require("@sentry/node");
 
 // Import route handlers
 const mergeRoutes = require("../server-src/routes/merge");
@@ -19,20 +17,8 @@ const extractPagesRoutes = require("../server-src/routes/extract-pages");
 const jpgToPdfRoutes = require("../server-src/routes/jpg-to-pdf");
 const wordToPdfRoutes = require("../server-src/routes/word-to-pdf");
 const protectPdfRoutes = require("../server-src/routes/protect-pdf");
-const ratingsRoutes = require("../server-src/routes/ratings");
-const connectDB = require("../server-src/config/db");
 
 const app = express();
-
-// Connect to Database
-connectDB();
-
-// Initialize Sentry
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  environment: process.env.NODE_ENV || "development",
-  tracesSampleRate: 1.0,
-});
 
 // Security middleware
 app.use(helmet());
@@ -58,11 +44,6 @@ app.use(limiter);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Temporary directory for file processing
-// Vercel only allows writing to /tmp
-const tempDir = path.join(os.tmpdir(), "pdf-toolkit-temp");
-fs.ensureDirSync(tempDir);
-
 // Routes
 app.use("/api/merge", mergeRoutes);
 app.use("/api/split", splitRoutes);
@@ -73,7 +54,6 @@ app.use("/api/extract-pages", extractPagesRoutes);
 app.use("/api/jpg-to-pdf", jpgToPdfRoutes);
 app.use("/api/word-to-pdf", wordToPdfRoutes);
 app.use("/api/protect-pdf", protectPdfRoutes);
-app.use("/api/ratings", ratingsRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -82,7 +62,6 @@ app.get("/api/health", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  Sentry.captureException(err);
   console.error(err.stack);
 
   let statusCode = err.statusCode || 500;
@@ -109,9 +88,6 @@ app.use((err, req, res, next) => {
 app.use("*", (req, res) => {
   res.status(404).json({ error: "Not Found" });
 });
-
-// Cleanup temp files on startup
-fs.emptyDirSync(tempDir);
 
 // Start server for local development
 const PORT = process.env.PORT || 3001;
