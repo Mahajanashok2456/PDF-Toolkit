@@ -9,7 +9,6 @@ const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
-const { encrypt } = require("node-qpdf2");
 
 const app = express();
 
@@ -314,12 +313,8 @@ app.post("/api/organize-pdf", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// Protect PDF with password (uses node-qpdf2 for encryption)
+// Protect PDF with password (requires qpdf binary - not available on Render free tier)
 app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
-  const tempDir = path.join(__dirname, "temp");
-  const inputPath = path.join(tempDir, `input-${uuidv4()}.pdf`);
-  const outputPath = path.join(tempDir, `output-${uuidv4()}.pdf`);
-
   try {
     if (!req.file) return res.status(400).json({ error: "PDF file required" });
     const { password } = req.body;
@@ -327,18 +322,32 @@ app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
       return res.status(400).json({ error: "Password is required" });
     }
 
+    // Check if qpdf is available (it won't be on Render free tier)
+    const { exec } = require("child_process");
+    const { promisify } = require("util");
+    const execAsync = promisify(exec);
+
+    try {
+      await execAsync("qpdf --version");
+    } catch {
+      return res.status(503).json({
+        error:
+          "PDF protection feature is not available on the free tier. Please upgrade to Render Starter or use a paid service.",
+        details:
+          "This feature requires the qpdf system binary which is only available on paid Render plans.",
+      });
+    }
+
+    // If qpdf is available, encrypt the PDF
+    const tempDir = path.join(__dirname, "temp");
+    const inputPath = path.join(tempDir, `input-${uuidv4()}.pdf`);
+    const outputPath = path.join(tempDir, `output-${uuidv4()}.pdf`);
+
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
     fs.writeFileSync(inputPath, req.file.buffer);
 
-    // Correct node-qpdf2 API usage
-    const options = {
-      input: inputPath,
-      output: outputPath,
-      password: password,
-      keyLength: 256,
-    };
-
-    await encrypt(options);
+    const cmd = `qpdf --encrypt "${password}" "${password}" 256 -- "${inputPath}" "${outputPath}"`;
+    await execAsync(cmd);
 
     const encrypted = fs.readFileSync(outputPath);
     res.setHeader("Content-Type", "application/pdf");
@@ -350,13 +359,6 @@ app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
   } catch (error) {
     console.error("Protect error:", error);
     res.status(500).json({ error: error.message || "Failed to protect PDF" });
-  } finally {
-    try {
-      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-    } catch (cleanupError) {
-      console.error("Cleanup error:", cleanupError);
-    }
   }
 });
 
