@@ -67,17 +67,23 @@
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
   </body>
-  <!-- Google Analytics -->
-  <script
-    async
-    src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"
-  ></script>
+  <!-- Google Analytics (Replace GA_MEASUREMENT_ID with your actual ID) -->
   <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() {
-      dataLayer.push(arguments);
+    if (window.location.hostname !== "localhost") {
+      (function () {
+        var script = document.createElement("script");
+        script.async = true;
+        script.src =
+          "https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+          dataLayer.push(arguments);
+        }
+        gtag("js", new Date());
+        gtag("config", "GA_MEASUREMENT_ID");
+      })();
     }
-    gtag("js", new Date());
-    gtag("config", "GA_MEASUREMENT_ID");
   </script>
 </html>
