@@ -13,6 +13,11 @@ const upload = multer({
 });
 
 router.post('/', upload.single('file'), async (req, res) => {
+  return res.status(503).json({ 
+    error: "Word to PDF conversion temporarily unavailable. Please try PDF to Word instead or use an alternative service." 
+  });
+  
+  /* Disabled to reduce serverless bundle size
   let browser;
   try {
     if (!req.file) return res.status(400).json({ error: "File required" });
