@@ -331,8 +331,7 @@ app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
       await execAsync("qpdf --version");
     } catch {
       return res.status(503).json({
-        error:
-          "PDF protection feature is not available on the free tier. Please upgrade to Render Starter or use a paid service.",
+        error: "Under process , Thankyou for using our services",
         details:
           "This feature requires the qpdf system binary which is only available on paid Render plans.",
       });
