@@ -1,13 +1,50 @@
+# Dependencies (handled by Vercel)
 node_modules
+
+# Python virtual environments
 venv
 .venv
 env
 __pycache__
 *.pyc
+
+# Build outputs
 dist
 build
 coverage
-server-src/models
+
+# Test files
+cypress
+cypress.config.js
+*.test.js
+*.spec.js
+test_*.js
+
+# Development files
+.git
+.gitignore
+.env.example
+.env.backend.example
+README.md
+*.md
+
+# Large static files
 *.pdf
 *.zip
 *.tar
+*.mp4
+*.mov
+
+# Database models (if heavy)
+server-src/models
+
+# IDE and OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Temporary files
+temp
+tmp
+*.log
