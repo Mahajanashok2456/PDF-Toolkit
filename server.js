@@ -1,15 +1,18 @@
 const express = require("express");
 const multer = require("multer");
-const { PDFDocument } = require("pdf-lib");
+const { PDFDocument, degrees } = require("pdf-lib");
+const path = require("path");
 
 const app = express();
 
-// Basic middleware
+// Middleware
 app.use(express.json({ limit: "50mb" }));
+app.use(express.static(path.join(__dirname, "../build")));
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,POST");
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
   next();
 });
 
@@ -18,7 +21,7 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// Health check
+// Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK" });
 });
@@ -29,17 +32,13 @@ app.post("/api/merge", upload.array("pdfs", 10), async (req, res) => {
     if (!req.files || req.files.length < 2) {
       return res.status(400).json({ error: "At least 2 PDF files required" });
     }
-
     const mergedPdf = await PDFDocument.create();
-    
     for (const file of req.files) {
       const pdfDoc = await PDFDocument.load(file.buffer);
       const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
       pages.forEach(page => mergedPdf.addPage(page));
     }
-
     const pdfBytes = await mergedPdf.save();
-    
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="merged.pdf"');
     res.send(Buffer.from(pdfBytes));
@@ -51,23 +50,16 @@ app.post("/api/merge", upload.array("pdfs", 10), async (req, res) => {
 // Split PDF
 app.post("/api/split", upload.single("pdf"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: "PDF file required" });
-    }
-
+    if (!req.file) return res.status(400).json({ error: "PDF file required" });
     const { startPage = 1, endPage } = req.body;
     const pdfDoc = await PDFDocument.load(req.file.buffer);
     const totalPages = pdfDoc.getPageCount();
-    
     const newPdf = await PDFDocument.create();
     const start = parseInt(startPage) - 1;
     const end = endPage ? parseInt(endPage) - 1 : totalPages - 1;
-    
     const pages = await newPdf.copyPages(pdfDoc, Array.from({length: end - start + 1}, (_, i) => start + i));
     pages.forEach(page => newPdf.addPage(page));
-
     const pdfBytes = await newPdf.save();
-    
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", 'attachment; filename="split.pdf"');
     res.send(Buffer.from(pdfBytes));
@@ -76,21 +68,27 @@ app.post("/api/split", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// Disabled routes - now handled by separate functions
-const disabledRoutes = [
-  "jpg-to-pdf", "word-to-pdf"
-];
-
-disabledRoutes.forEach(route => {
-  app.post(`/api/${route}`, (req, res) => {
-    res.status(503).json({ 
-      error: `${route} temporarily unavailable to reduce bundle size` 
-    });
-  });
+// Rotate PDF
+app.post("/api/rotate", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "PDF file required" });
+    const { angle } = req.body;
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const pages = pdfDoc.getPages();
+    const rotation = degrees(parseInt(angle));
+    pages.forEach(page => page.setRotation(rotation));
+    const pdfBytes = await pdfDoc.save();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="rotated.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to rotate PDF" });
+  }
 });
 
-app.use("*", (req, res) => {
-  res.status(404).json({ error: "Not Found" });
+// Serve React app
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../build/index.html"));
 });
 
 const PORT = process.env.PORT || 3001;

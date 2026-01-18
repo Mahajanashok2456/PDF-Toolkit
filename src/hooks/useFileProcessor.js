@@ -46,9 +46,7 @@ const useFileProcessor = () => {
     let field = "pdf";
     if (selectedTool === "merge") {
       field = "pdfs";
-    } else if (
-      ["jpg-to-pdf"].includes(selectedTool)
-    ) {
+    } else if (["jpg-to-pdf"].includes(selectedTool)) {
       field = "file";
     }
 

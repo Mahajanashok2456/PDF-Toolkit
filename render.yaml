@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: pdf-toolkit
+    env: node
+    buildCommand: npm install
+    startCommand: node api/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
