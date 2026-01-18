@@ -12,19 +12,36 @@ const mongoose = require("mongoose");
 
 const app = express();
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
+const originPatterns = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
+
+const escapeRegex = (str) => str.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+const isOriginAllowed = (origin) => {
+  // Allow non-browser requests (no Origin header)
+  if (!origin) return true;
+  return originPatterns.some((pattern) => {
+    if (pattern === "*") return true;
+    if (pattern.includes("*")) {
+      const regex = new RegExp(
+        "^" + escapeRegex(pattern).replace(/\\\*/g, ".*") + "$",
+      );
+      return regex.test(origin);
+    }
+    return pattern === origin;
+  });
+};
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      if (isOriginAllowed(origin)) return callback(null, true);
       return callback(new Error("CORS not allowed for this origin"));
     },
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type"],
-  })
+  }),
 );
 
 app.use(express.json({ limit: "50mb" }));
@@ -41,7 +58,10 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("MongoDB connected");
   } catch (err) {
-    console.warn("Mongo connection failed (continuing without DB)", err.message);
+    console.warn(
+      "Mongo connection failed (continuing without DB)",
+      err.message,
+    );
   }
 };
 connectDB();
@@ -53,7 +73,7 @@ const RatingSchema = new mongoose.Schema(
     tool: { type: String, default: "general" },
     timestamp: { type: Date, default: Date.now },
   },
-  { collection: "ratings" }
+  { collection: "ratings" },
 );
 const Rating = mongoose.models.Rating || mongoose.model("Rating", RatingSchema);
 
@@ -103,8 +123,13 @@ app.post("/api/split", upload.single("pdf"), async (req, res) => {
 
     const newPdf = await PDFDocument.create();
     const start = Math.max(0, parseInt(startPage, 10) - 1);
-    const end = endPage ? Math.min(totalPages - 1, parseInt(endPage, 10) - 1) : totalPages - 1;
-    const indices = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+    const end = endPage
+      ? Math.min(totalPages - 1, parseInt(endPage, 10) - 1)
+      : totalPages - 1;
+    const indices = Array.from(
+      { length: end - start + 1 },
+      (_, i) => start + i,
+    );
 
     const pages = await newPdf.copyPages(pdfDoc, indices);
     pages.forEach((page) => newPdf.addPage(page));
@@ -158,21 +183,26 @@ app.post("/api/remove-pages", upload.single("pdf"), async (req, res) => {
     }
 
     if (!Array.isArray(pagesToRemove) || pagesToRemove.length === 0) {
-      return res.status(400).json({ error: "Pages to remove must be an array" });
+      return res
+        .status(400)
+        .json({ error: "Pages to remove must be an array" });
     }
 
     const pdfDoc = await PDFDocument.load(req.file.buffer);
     const totalPages = pdfDoc.getPageCount();
     const invalid = pagesToRemove.filter((p) => p < 1 || p > totalPages);
     if (invalid.length) {
-      return res.status(400).json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
+      return res
+        .status(400)
+        .json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
     }
 
     const keep = [];
     for (let i = 0; i < totalPages; i += 1) {
       if (!pagesToRemove.includes(i + 1)) keep.push(i);
     }
-    if (!keep.length) return res.status(400).json({ error: "Cannot remove all pages" });
+    if (!keep.length)
+      return res.status(400).json({ error: "Cannot remove all pages" });
 
     const newPdf = await PDFDocument.create();
     const pages = await newPdf.copyPages(pdfDoc, keep);
@@ -180,7 +210,10 @@ app.post("/api/remove-pages", upload.single("pdf"), async (req, res) => {
 
     const pdfBytes = await newPdf.save();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="removed-pages.pdf"');
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="removed-pages.pdf"',
+    );
     res.send(Buffer.from(pdfBytes));
   } catch (error) {
     console.error("Remove pages error:", error);
@@ -203,14 +236,18 @@ app.post("/api/extract-pages", upload.single("pdf"), async (req, res) => {
     }
 
     if (!Array.isArray(pagesToExtract) || pagesToExtract.length === 0) {
-      return res.status(400).json({ error: "Pages to extract must be an array" });
+      return res
+        .status(400)
+        .json({ error: "Pages to extract must be an array" });
     }
 
     const pdfDoc = await PDFDocument.load(req.file.buffer);
     const totalPages = pdfDoc.getPageCount();
     const invalid = pagesToExtract.filter((p) => p < 1 || p > totalPages);
     if (invalid.length) {
-      return res.status(400).json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
+      return res
+        .status(400)
+        .json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
     }
 
     const indices = pagesToExtract.map((p) => p - 1).sort((a, b) => a - b);
@@ -220,7 +257,10 @@ app.post("/api/extract-pages", upload.single("pdf"), async (req, res) => {
 
     const pdfBytes = await newPdf.save();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="extracted-pages.pdf"');
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="extracted-pages.pdf"',
+    );
     res.send(Buffer.from(pdfBytes));
   } catch (error) {
     console.error("Extract pages error:", error);
@@ -250,7 +290,9 @@ app.post("/api/organize-pdf", upload.single("pdf"), async (req, res) => {
     const totalPages = pdfDoc.getPageCount();
     const invalid = newOrder.filter((p) => p < 1 || p > totalPages);
     if (invalid.length) {
-      return res.status(400).json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
+      return res
+        .status(400)
+        .json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
     }
 
     const target = newOrder.map((p) => p - 1);
@@ -260,7 +302,10 @@ app.post("/api/organize-pdf", upload.single("pdf"), async (req, res) => {
 
     const pdfBytes = await newPdf.save();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="organized.pdf"');
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="organized.pdf"',
+    );
     res.send(Buffer.from(pdfBytes));
   } catch (error) {
     console.error("Organize error:", error);
@@ -268,12 +313,8 @@ app.post("/api/organize-pdf", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// Protect PDF with password (requires qpdf in PATH)
+// Protect PDF with password (uses pdf-lib AES-256 encryption)
 app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
-  const tempDir = path.join(__dirname, "temp");
-  const inputPath = path.join(tempDir, `input-${uuidv4()}.pdf`);
-  const outputPath = path.join(tempDir, `output-${uuidv4()}.pdf`);
-
   try {
     if (!req.file) return res.status(400).json({ error: "PDF file required" });
     const { password } = req.body;
@@ -281,36 +322,27 @@ app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
       return res.status(400).json({ error: "Password is required" });
     }
 
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-    fs.writeFileSync(inputPath, req.file.buffer);
-
-    const cmd = `qpdf --encrypt "${password}" "${password}" 256 -- "${inputPath}" "${outputPath}"`;
-    await new Promise((resolve, reject) => {
-      exec(cmd, (error) => {
-        if (error) {
-          if (/(not recognized|command not found)/i.test(error.message)) {
-            return reject(new Error("qpdf is required on the server to protect PDFs"));
-          }
-          return reject(error);
-        }
-        return resolve();
-      });
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    pdfDoc.encrypt({
+      userPassword: password,
+      ownerPassword: password,
+      permissions: {
+        printing: "highResolution",
+        modifyingContents: false,
+        copyingOrExtracting: false,
+      },
     });
 
-    const encrypted = fs.readFileSync(outputPath);
+    const encrypted = await pdfDoc.save();
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="protected.pdf"');
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="protected.pdf"',
+    );
     res.send(encrypted);
   } catch (error) {
     console.error("Protect error:", error);
     res.status(500).json({ error: error.message || "Failed to protect PDF" });
-  } finally {
-    try {
-      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
-    } catch (cleanupError) {
-      console.error("Cleanup error:", cleanupError);
-    }
   }
 });
 
@@ -318,7 +350,9 @@ app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
 app.post("/api/jpg-to-pdf", upload.array("file", 50), async (req, res) => {
   try {
     if (!req.files || !req.files.length) {
-      return res.status(400).json({ error: "At least one image file is required" });
+      return res
+        .status(400)
+        .json({ error: "At least one image file is required" });
     }
 
     const validImages = [];
@@ -327,18 +361,27 @@ app.post("/api/jpg-to-pdf", upload.array("file", 50), async (req, res) => {
         if (file.size > 50 * 1024 * 1024) continue;
         const meta = await sharp(file.buffer).metadata();
         if (!meta || !meta.width || !meta.height) continue;
-        validImages.push({ buffer: file.buffer, metadata: meta, name: file.originalname });
+        validImages.push({
+          buffer: file.buffer,
+          metadata: meta,
+          name: file.originalname,
+        });
       } catch (err) {
         console.warn("Skipping invalid image", file.originalname, err.message);
       }
     }
 
     if (!validImages.length) {
-      return res.status(400).json({ error: "No valid images could be processed" });
+      return res
+        .status(400)
+        .json({ error: "No valid images could be processed" });
     }
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="converted.pdf"');
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="converted.pdf"',
+    );
 
     const doc = new PDFKitDocument({ autoFirstPage: false });
     doc.pipe(res);
@@ -350,7 +393,12 @@ app.post("/api/jpg-to-pdf", upload.array("file", 50), async (req, res) => {
       try {
         const processedBuffer = await sharp(image.buffer)
           .rotate()
-          .resize({ width: MAX_DIM, height: MAX_DIM, fit: "inside", withoutEnlargement: true })
+          .resize({
+            width: MAX_DIM,
+            height: MAX_DIM,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
           .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
           .toBuffer();
 
@@ -400,10 +448,19 @@ app.get("/api/ratings/stats", async (req, res) => {
       return res.json({ ratingValue: 5.0, ratingCount: 0, note: "Offline" });
     }
     const stats = await Rating.aggregate([
-      { $group: { _id: null, averageRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: "$rating" },
+          totalRatings: { $sum: 1 },
+        },
+      },
     ]);
     if (!stats.length) return res.json({ ratingValue: 0, ratingCount: 0 });
-    res.json({ ratingValue: parseFloat(stats[0].averageRating.toFixed(1)), ratingCount: stats[0].totalRatings });
+    res.json({
+      ratingValue: parseFloat(stats[0].averageRating.toFixed(1)),
+      ratingCount: stats[0].totalRatings,
+    });
   } catch (error) {
     console.error("Ratings stats error:", error);
     res.status(500).json({ error: "Failed to fetch rating stats" });
