@@ -1,5 +1,0 @@
-pdf2docx
-flask
-flask-cors
-requests-toolbelt
-opencv-python-headless

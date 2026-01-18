@@ -33,12 +33,6 @@ export const seoConfig = {
     keywords:
       "rotate pdf, fix pdf orientation, turn pdf pages, pdf rotation tool",
   },
-  "pdf-to-word": {
-    title: "PDF to Word Converter – Convert PDF to Editable DOCX",
-    description:
-      "Convert PDF files into fully editable Word documents online. Preserve formatting and layout accurately.",
-    keywords: "pdf to word, pdf to docx, convert pdf to word, editable pdf",
-  },
   "jpg-to-pdf": {
     title: "JPG to PDF Converter – Convert Images to PDF",
     description:

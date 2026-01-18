@@ -1,6 +1,0 @@
-pdf2docx
-flask
-flask-cors
-opencv-python-headless
-pymupdf
-python-docx
