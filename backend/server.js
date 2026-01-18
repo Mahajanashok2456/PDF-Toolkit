@@ -330,11 +330,15 @@ app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
     fs.writeFileSync(inputPath, req.file.buffer);
 
-    await encrypt(inputPath, {
-      outputFile: outputPath,
+    // Correct node-qpdf2 API usage
+    const options = {
+      input: inputPath,
+      output: outputPath,
       password: password,
       keyLength: 256,
-    });
+    };
+
+    await encrypt(options);
 
     const encrypted = fs.readFileSync(outputPath);
     res.setHeader("Content-Type", "application/pdf");
