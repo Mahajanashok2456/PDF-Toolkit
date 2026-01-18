@@ -7,7 +7,6 @@
   "engines": {
     "node": "20.x"
   },
-
   "dependencies": {
     "@sentry/node": "^7.114.0",
     "@sentry/react": "^10.0.0",
@@ -40,12 +39,12 @@
     "react-dom": "^19.2.0",
     "react-icons": "^5.5.0",
     "react-scripts": "5.0.1",
+    "serverless-http": "^4.0.0",
     "sharp": "^0.33.4",
     "tailwindcss": "^3.4.18",
     "uuid": "^9.0.1",
     "web-vitals": "^5.1.0"
   },
-
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -54,7 +53,6 @@
     "dev": "node api/server.js",
     "api-test": "mocha api/**/*.test.js --exit"
   },
-
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -72,22 +70,18 @@
     "supertest": "^6.3.3",
     "vercel": "^32.5.0"
   },
-
   "overrides": {
     "webpack": "5.88.2"
   },
-
   "resolutions": {
     "**/webpack": "5.88.2"
   },
-
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
     ]
   },
-
   "browserslist": {
     "production": [
       ">0.2%",
