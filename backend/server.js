@@ -558,7 +558,8 @@ app.post("/api/word-to-pdf", upload.single("docx"), async (req, res) => {
   const outputPath = path.join(tempDir, `output-${uuidv4()}.pdf`);
 
   try {
-    if (!req.file) return res.status(400).json({ error: "Word file (.docx) required" });
+    if (!req.file)
+      return res.status(400).json({ error: "Word file (.docx) required" });
 
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
     fs.writeFileSync(inputPath, req.file.buffer);
@@ -573,7 +574,10 @@ app.post("/api/word-to-pdf", upload.single("docx"), async (req, res) => {
       if (fs.existsSync(outputPath)) {
         const pdf = fs.readFileSync(outputPath);
         res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", 'attachment; filename="converted.pdf"');
+        res.setHeader(
+          "Content-Disposition",
+          'attachment; filename="converted.pdf"',
+        );
         return res.send(pdf);
       }
     } catch (libreofficeErr) {

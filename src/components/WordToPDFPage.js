@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaFilePdf } from "react-icons/fa";
-import { SiMicrosoftword } from "react-icons/si";
+import { FaArrowLeft, FaFilePdf, FaFileWord } from "react-icons/fa";
 import useFileProcessor from "../hooks/useFileProcessor";
 import { ShineButton } from "./ShineButton";
 
@@ -43,7 +42,7 @@ const WordToPDFPage = () => {
               Back
             </button>
             <div className="flex items-center">
-              <SiMicrosoftword className="text-3xl text-blue-400 mr-4" />
+              <FaFileWord className="text-3xl text-blue-400 mr-4" />
               <FaArrowLeft className="text-xl text-modern-calm-alabaster-grey mx-2 rotate-180" />
               <FaFilePdf className="text-3xl text-red-500 mr-4" />
               <div>
@@ -80,13 +79,12 @@ const WordToPDFPage = () => {
                 className="hidden"
                 id="word-input"
               />
-              <label
-                htmlFor="word-input"
-                className="cursor-pointer block"
-              >
-                <SiMicrosoftword className="text-6xl text-blue-400 mx-auto mb-4" />
+              <label htmlFor="word-input" className="cursor-pointer block">
+                <FaFileWord className="text-6xl text-blue-400 mx-auto mb-4" />
                 <p className="text-modern-calm-alabaster-grey text-lg font-semibold mb-2">
-                  {files.length > 0 ? files[0].name : "Click to upload or drag & drop"}
+                  {files.length > 0
+                    ? files[0].name
+                    : "Click to upload or drag & drop"}
                 </p>
                 <p className="text-modern-calm-dusty-denim text-sm">
                   Supported format: .docx, .doc
