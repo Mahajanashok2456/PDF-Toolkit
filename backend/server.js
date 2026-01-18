@@ -551,6 +551,56 @@ except Exception as e:
   }
 });
 
+// Word to PDF
+app.post("/api/word-to-pdf", upload.single("docx"), async (req, res) => {
+  const tempDir = path.join(__dirname, "temp");
+  const inputPath = path.join(tempDir, `input-${uuidv4()}.docx`);
+  const outputPath = path.join(tempDir, `output-${uuidv4()}.pdf`);
+
+  try {
+    if (!req.file) return res.status(400).json({ error: "Word file (.docx) required" });
+
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    fs.writeFileSync(inputPath, req.file.buffer);
+
+    const { promisify } = require("util");
+    const execAsync = promisify(exec);
+
+    // Try LibreOffice first
+    try {
+      const cmd = `libreoffice --headless --convert-to pdf --outdir "${tempDir}" "${inputPath}"`;
+      await execAsync(cmd);
+      if (fs.existsSync(outputPath)) {
+        const pdf = fs.readFileSync(outputPath);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", 'attachment; filename="converted.pdf"');
+        return res.send(pdf);
+      }
+    } catch (libreofficeErr) {
+      console.warn("LibreOffice not available:", libreofficeErr.message);
+    }
+
+    // Fallback: error message
+    return res.status(503).json({
+      error: "Under process , Thankyou for using our services",
+      details:
+        "This feature requires LibreOffice or pandoc. Not available on Render free tier. Upgrade to Starter ($7/month) for LibreOffice support.",
+    });
+  } catch (error) {
+    console.error("Word to PDF error:", error);
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to convert Word to PDF" });
+  } finally {
+    try {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    } catch (cleanupErr) {
+      console.error("Cleanup error:", cleanupErr);
+    }
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);

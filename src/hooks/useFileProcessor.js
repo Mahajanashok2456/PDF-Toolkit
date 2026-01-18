@@ -47,6 +47,8 @@ const useFileProcessor = () => {
       field = "pdfs";
     } else if (["jpg-to-pdf"].includes(selectedTool)) {
       field = "file";
+    } else if (selectedTool === "word-to-pdf") {
+      field = "docx";
     }
 
     if (selectedTool === "merge") {
