@@ -1,6 +1,9 @@
 # Dependencies (handled by Vercel)
 node_modules
 
+# Exclude entire server-src folder
+server-src/
+
 # Heavy dependencies to exclude
 node_modules/@sparticuz
 node_modules/puppeteer
@@ -8,6 +11,9 @@ node_modules/puppeteer-core
 node_modules/mongoose
 node_modules/@sentry
 node_modules/fs-extra
+node_modules/helmet
+node_modules/cors
+node_modules/express-rate-limit
 
 # Python virtual environments
 venv

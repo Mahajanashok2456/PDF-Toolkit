@@ -1,99 +1,102 @@
-require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
-const path = require("path");
-const os = require("os");
-const { v4: uuidv4 } = require("uuid");
-
-// Import route handlers
-const mergeRoutes = require("../server-src/routes/merge");
-const splitRoutes = require("../server-src/routes/split");
-const pdfToWordRoutes = require("../server-src/routes/pdf-to-word");
-const rotateRoutes = require("../server-src/routes/rotate");
-const removePagesRoutes = require("../server-src/routes/remove-pages");
-const extractPagesRoutes = require("../server-src/routes/extract-pages");
-const jpgToPdfRoutes = require("../server-src/routes/jpg-to-pdf");
-const wordToPdfRoutes = require("../server-src/routes/word-to-pdf");
-const protectPdfRoutes = require("../server-src/routes/protect-pdf");
+const multer = require("multer");
+const { PDFDocument } = require("pdf-lib");
 
 const app = express();
 
-// Security middleware
-app.use(helmet());
-
-// CORS configuration
-app.use(
-  cors({
-    origin: process.env.ALLOWED_ORIGINS || "*",
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again later.",
-});
-app.use(limiter);
-
-// Body parsing middleware
+// Basic middleware
 app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-
-// Routes
-app.use("/api/merge", mergeRoutes);
-app.use("/api/split", splitRoutes);
-app.use("/api/pdf-to-word", pdfToWordRoutes);
-app.use("/api/rotate", rotateRoutes);
-app.use("/api/remove-pages", removePagesRoutes);
-app.use("/api/extract-pages", extractPagesRoutes);
-app.use("/api/jpg-to-pdf", jpgToPdfRoutes);
-app.use("/api/word-to-pdf", wordToPdfRoutes);
-app.use("/api/protect-pdf", protectPdfRoutes);
-
-// Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  next();
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }
+});
 
-  let statusCode = err.statusCode || 500;
-  let message = err.message || "Internal Server Error";
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK" });
+});
 
-  // Handle Multer errors
-  if (err.code === "LIMIT_FILE_SIZE") {
-    statusCode = 413;
-    message = "File size exceeds 50MB limit";
-  } else if (
-    message === "Only PDF files are allowed" ||
-    message === "Only PDF and image files are allowed"
-  ) {
-    statusCode = 400;
+// Merge PDFs
+app.post("/api/merge", upload.array("pdfs", 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length < 2) {
+      return res.status(400).json({ error: "At least 2 PDF files required" });
+    }
+
+    const mergedPdf = await PDFDocument.create();
+    
+    for (const file of req.files) {
+      const pdfDoc = await PDFDocument.load(file.buffer);
+      const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      pages.forEach(page => mergedPdf.addPage(page));
+    }
+
+    const pdfBytes = await mergedPdf.save();
+    
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="merged.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to merge PDFs" });
   }
+});
 
-  res.status(statusCode).json({
-    error: message,
-    details: process.env.NODE_ENV === "development" ? err.stack : undefined,
+// Split PDF
+app.post("/api/split", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "PDF file required" });
+    }
+
+    const { startPage = 1, endPage } = req.body;
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const totalPages = pdfDoc.getPageCount();
+    
+    const newPdf = await PDFDocument.create();
+    const start = parseInt(startPage) - 1;
+    const end = endPage ? parseInt(endPage) - 1 : totalPages - 1;
+    
+    const pages = await newPdf.copyPages(pdfDoc, Array.from({length: end - start + 1}, (_, i) => start + i));
+    pages.forEach(page => newPdf.addPage(page));
+
+    const pdfBytes = await newPdf.save();
+    
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="split.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to split PDF" });
+  }
+});
+
+// Disabled routes
+const disabledRoutes = [
+  "pdf-to-word", "rotate", "remove-pages", "extract-pages", 
+  "jpg-to-pdf", "word-to-pdf", "protect-pdf"
+];
+
+disabledRoutes.forEach(route => {
+  app.post(`/api/${route}`, (req, res) => {
+    res.status(503).json({ 
+      error: `${route} temporarily unavailable to reduce bundle size` 
+    });
   });
 });
 
-// 404 handler
 app.use("*", (req, res) => {
   res.status(404).json({ error: "Not Found" });
 });
 
-// Start server for local development
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Export for Vercel
 module.exports = app;
