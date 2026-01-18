@@ -1,0 +1,418 @@
+const express = require("express");
+const cors = require("cors");
+const multer = require("multer");
+const { PDFDocument, degrees } = require("pdf-lib");
+const PDFKitDocument = require("pdfkit");
+const sharp = require("sharp");
+const { v4: uuidv4 } = require("uuid");
+const { exec } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+const mongoose = require("mongoose");
+
+const app = express();
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("CORS not allowed for this origin"));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
+
+app.use(express.json({ limit: "50mb" }));
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
+});
+
+// Mongo (ratings) optional
+const connectDB = async () => {
+  if (!process.env.MONGODB_URI) return;
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log("MongoDB connected");
+  } catch (err) {
+    console.warn("Mongo connection failed (continuing without DB)", err.message);
+  }
+};
+connectDB();
+
+const RatingSchema = new mongoose.Schema(
+  {
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    feedback: { type: String, trim: true, maxlength: 200 },
+    tool: { type: String, default: "general" },
+    timestamp: { type: Date, default: Date.now },
+  },
+  { collection: "ratings" }
+);
+const Rating = mongoose.models.Rating || mongoose.model("Rating", RatingSchema);
+
+// Health check
+app.get("/", (req, res) => {
+  res.json({ status: "PDF Toolkit Backend API", version: "1.1.0" });
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK" });
+});
+
+// Merge PDFs
+app.post("/api/merge", upload.array("pdfs", 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length < 2) {
+      return res.status(400).json({ error: "At least 2 PDF files required" });
+    }
+
+    const mergedPdf = await PDFDocument.create();
+
+    for (const file of req.files) {
+      const pdfDoc = await PDFDocument.load(file.buffer);
+      const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      pages.forEach((page) => mergedPdf.addPage(page));
+    }
+
+    const pdfBytes = await mergedPdf.save();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="merged.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    console.error("Merge error:", error);
+    res.status(500).json({ error: "Failed to merge PDFs" });
+  }
+});
+
+// Split PDF
+app.post("/api/split", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "PDF file required" });
+
+    const { startPage = 1, endPage } = req.body;
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const totalPages = pdfDoc.getPageCount();
+
+    const newPdf = await PDFDocument.create();
+    const start = Math.max(0, parseInt(startPage, 10) - 1);
+    const end = endPage ? Math.min(totalPages - 1, parseInt(endPage, 10) - 1) : totalPages - 1;
+    const indices = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+
+    const pages = await newPdf.copyPages(pdfDoc, indices);
+    pages.forEach((page) => newPdf.addPage(page));
+
+    const pdfBytes = await newPdf.save();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="split.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    console.error("Split error:", error);
+    res.status(500).json({ error: "Failed to split PDF" });
+  }
+});
+
+// Rotate PDF
+app.post("/api/rotate", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "PDF file required" });
+
+    const { angle } = req.body;
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const pages = pdfDoc.getPages();
+
+    const rotation = degrees(parseInt(angle, 10));
+    pages.forEach((page) => page.setRotation(rotation));
+
+    const pdfBytes = await pdfDoc.save();
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="rotated.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    console.error("Rotate error:", error);
+    res.status(500).json({ error: "Failed to rotate PDF" });
+  }
+});
+
+// Remove pages
+app.post("/api/remove-pages", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "PDF file required" });
+
+    let { pagesToRemove } = req.body;
+    if (typeof pagesToRemove === "string") {
+      try {
+        pagesToRemove = JSON.parse(pagesToRemove);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    if (!Array.isArray(pagesToRemove) || pagesToRemove.length === 0) {
+      return res.status(400).json({ error: "Pages to remove must be an array" });
+    }
+
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const totalPages = pdfDoc.getPageCount();
+    const invalid = pagesToRemove.filter((p) => p < 1 || p > totalPages);
+    if (invalid.length) {
+      return res.status(400).json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
+    }
+
+    const keep = [];
+    for (let i = 0; i < totalPages; i += 1) {
+      if (!pagesToRemove.includes(i + 1)) keep.push(i);
+    }
+    if (!keep.length) return res.status(400).json({ error: "Cannot remove all pages" });
+
+    const newPdf = await PDFDocument.create();
+    const pages = await newPdf.copyPages(pdfDoc, keep);
+    pages.forEach((page) => newPdf.addPage(page));
+
+    const pdfBytes = await newPdf.save();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="removed-pages.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    console.error("Remove pages error:", error);
+    res.status(500).json({ error: "Failed to remove pages" });
+  }
+});
+
+// Extract pages
+app.post("/api/extract-pages", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "PDF file required" });
+
+    let { pagesToExtract } = req.body;
+    if (typeof pagesToExtract === "string") {
+      try {
+        pagesToExtract = JSON.parse(pagesToExtract);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    if (!Array.isArray(pagesToExtract) || pagesToExtract.length === 0) {
+      return res.status(400).json({ error: "Pages to extract must be an array" });
+    }
+
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const totalPages = pdfDoc.getPageCount();
+    const invalid = pagesToExtract.filter((p) => p < 1 || p > totalPages);
+    if (invalid.length) {
+      return res.status(400).json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
+    }
+
+    const indices = pagesToExtract.map((p) => p - 1).sort((a, b) => a - b);
+    const newPdf = await PDFDocument.create();
+    const pages = await newPdf.copyPages(pdfDoc, indices);
+    pages.forEach((page) => newPdf.addPage(page));
+
+    const pdfBytes = await newPdf.save();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="extracted-pages.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    console.error("Extract pages error:", error);
+    res.status(500).json({ error: "Failed to extract pages" });
+  }
+});
+
+// Organize/reorder pages
+app.post("/api/organize-pdf", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "PDF file required" });
+
+    let { newOrder } = req.body;
+    if (typeof newOrder === "string") {
+      try {
+        newOrder = JSON.parse(newOrder);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+
+    if (!Array.isArray(newOrder) || newOrder.length === 0) {
+      return res.status(400).json({ error: "New order must be an array" });
+    }
+
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const totalPages = pdfDoc.getPageCount();
+    const invalid = newOrder.filter((p) => p < 1 || p > totalPages);
+    if (invalid.length) {
+      return res.status(400).json({ error: `Invalid page numbers: ${invalid.join(", ")}` });
+    }
+
+    const target = newOrder.map((p) => p - 1);
+    const newPdf = await PDFDocument.create();
+    const pages = await newPdf.copyPages(pdfDoc, target);
+    pages.forEach((page) => newPdf.addPage(page));
+
+    const pdfBytes = await newPdf.save();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="organized.pdf"');
+    res.send(Buffer.from(pdfBytes));
+  } catch (error) {
+    console.error("Organize error:", error);
+    res.status(500).json({ error: "Failed to organize PDF" });
+  }
+});
+
+// Protect PDF with password (requires qpdf in PATH)
+app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
+  const tempDir = path.join(__dirname, "temp");
+  const inputPath = path.join(tempDir, `input-${uuidv4()}.pdf`);
+  const outputPath = path.join(tempDir, `output-${uuidv4()}.pdf`);
+
+  try {
+    if (!req.file) return res.status(400).json({ error: "PDF file required" });
+    const { password } = req.body;
+    if (!password || password.length < 1) {
+      return res.status(400).json({ error: "Password is required" });
+    }
+
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    fs.writeFileSync(inputPath, req.file.buffer);
+
+    const cmd = `qpdf --encrypt "${password}" "${password}" 256 -- "${inputPath}" "${outputPath}"`;
+    await new Promise((resolve, reject) => {
+      exec(cmd, (error) => {
+        if (error) {
+          if (/(not recognized|command not found)/i.test(error.message)) {
+            return reject(new Error("qpdf is required on the server to protect PDFs"));
+          }
+          return reject(error);
+        }
+        return resolve();
+      });
+    });
+
+    const encrypted = fs.readFileSync(outputPath);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="protected.pdf"');
+    res.send(encrypted);
+  } catch (error) {
+    console.error("Protect error:", error);
+    res.status(500).json({ error: error.message || "Failed to protect PDF" });
+  } finally {
+    try {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    } catch (cleanupError) {
+      console.error("Cleanup error:", cleanupError);
+    }
+  }
+});
+
+// JPG to PDF
+app.post("/api/jpg-to-pdf", upload.array("file", 50), async (req, res) => {
+  try {
+    if (!req.files || !req.files.length) {
+      return res.status(400).json({ error: "At least one image file is required" });
+    }
+
+    const validImages = [];
+    for (const file of req.files) {
+      try {
+        if (file.size > 50 * 1024 * 1024) continue;
+        const meta = await sharp(file.buffer).metadata();
+        if (!meta || !meta.width || !meta.height) continue;
+        validImages.push({ buffer: file.buffer, metadata: meta, name: file.originalname });
+      } catch (err) {
+        console.warn("Skipping invalid image", file.originalname, err.message);
+      }
+    }
+
+    if (!validImages.length) {
+      return res.status(400).json({ error: "No valid images could be processed" });
+    }
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", 'attachment; filename="converted.pdf"');
+
+    const doc = new PDFKitDocument({ autoFirstPage: false });
+    doc.pipe(res);
+
+    const MAX_DIM = parseInt(process.env.JPG_TO_PDF_MAX_DIM || "2000", 10);
+    const JPEG_QUALITY = parseInt(process.env.JPG_TO_PDF_QUALITY || "70", 10);
+
+    for (const image of validImages) {
+      try {
+        const processedBuffer = await sharp(image.buffer)
+          .rotate()
+          .resize({ width: MAX_DIM, height: MAX_DIM, fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
+          .toBuffer();
+
+        const processedMeta = await sharp(processedBuffer).metadata();
+        const w = processedMeta.width || image.metadata.width;
+        const h = processedMeta.height || image.metadata.height;
+
+        doc.addPage({ size: [w, h] });
+        doc.image(processedBuffer, 0, 0, { width: w, height: h });
+      } catch (err) {
+        const { width, height } = image.metadata;
+        doc.addPage({ size: [width, height] });
+        doc.image(image.buffer, 0, 0, { width, height });
+      }
+    }
+
+    doc.end();
+  } catch (error) {
+    console.error("JPG to PDF error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Failed to convert JPG to PDF" });
+    }
+  }
+});
+
+// Ratings
+app.post("/api/ratings", async (req, res) => {
+  try {
+    if (!mongoose.connection.readyState) {
+      return res.status(503).json({ error: "Ratings unavailable" });
+    }
+    const { rating, feedback, tool } = req.body || {};
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Invalid rating (1-5 required)" });
+    }
+    await Rating.create({ rating, feedback, tool: tool || "general" });
+    res.status(201).json({ message: "Rating submitted" });
+  } catch (error) {
+    console.error("Ratings error:", error);
+    res.status(500).json({ error: "Failed to save rating" });
+  }
+});
+
+app.get("/api/ratings/stats", async (req, res) => {
+  try {
+    if (!mongoose.connection.readyState) {
+      return res.json({ ratingValue: 5.0, ratingCount: 0, note: "Offline" });
+    }
+    const stats = await Rating.aggregate([
+      { $group: { _id: null, averageRating: { $avg: "$rating" }, totalRatings: { $sum: 1 } } },
+    ]);
+    if (!stats.length) return res.json({ ratingValue: 0, ratingCount: 0 });
+    res.json({ ratingValue: parseFloat(stats[0].averageRating.toFixed(1)), ratingCount: stats[0].totalRatings });
+  } catch (error) {
+    console.error("Ratings stats error:", error);
+    res.status(500).json({ error: "Failed to fetch rating stats" });
+  }
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Backend server running on port ${PORT}`);
+});
+
+module.exports = app;
