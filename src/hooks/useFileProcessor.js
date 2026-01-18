@@ -47,7 +47,7 @@ const useFileProcessor = () => {
     if (selectedTool === "merge") {
       field = "pdfs";
     } else if (
-      ["jpg-to-pdf", "word-to-pdf", "html-to-pdf"].includes(selectedTool)
+      ["jpg-to-pdf"].includes(selectedTool)
     ) {
       field = "file";
     }
@@ -134,10 +134,6 @@ const useFileProcessor = () => {
       } else if (selectedTool === "organize-pdf") {
         downloadName = "organized.pdf";
       } else if (selectedTool === "jpg-to-pdf") {
-        downloadName = "converted.pdf";
-      } else if (selectedTool === "word-to-pdf") {
-        downloadName = "converted.pdf";
-      } else if (selectedTool === "html-to-pdf") {
         downloadName = "converted.pdf";
       } else if (selectedTool === "protect-pdf") {
         downloadName = "protected.pdf";

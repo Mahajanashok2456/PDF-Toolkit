@@ -18,7 +18,6 @@ const removePagesRoutes = require("../server-src/routes/remove-pages");
 const extractPagesRoutes = require("../server-src/routes/extract-pages");
 const jpgToPdfRoutes = require("../server-src/routes/jpg-to-pdf");
 const wordToPdfRoutes = require("../server-src/routes/word-to-pdf");
-const htmlToPdfRoutes = require("../server-src/routes/html-to-pdf");
 const protectPdfRoutes = require("../server-src/routes/protect-pdf");
 const ratingsRoutes = require("../server-src/routes/ratings");
 const connectDB = require("../server-src/config/db");
@@ -73,7 +72,6 @@ app.use("/api/remove-pages", removePagesRoutes);
 app.use("/api/extract-pages", extractPagesRoutes);
 app.use("/api/jpg-to-pdf", jpgToPdfRoutes);
 app.use("/api/word-to-pdf", wordToPdfRoutes);
-app.use("/api/html-to-pdf", htmlToPdfRoutes);
 app.use("/api/protect-pdf", protectPdfRoutes);
 app.use("/api/ratings", ratingsRoutes);
 
