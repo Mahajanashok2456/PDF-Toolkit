@@ -24,6 +24,20 @@ const Dashboard = () => {
       description: "Divide a PDF into separate files",
       path: "/split-pdf",
     },
+    {
+      name: "PDF to Word",
+      value: "pdf-to-word",
+      category: "Convert PDF",
+      description: "Convert PDFs into editable Word documents (.docx)",
+      path: "/pdf-to-word",
+    },
+    {
+      name: "Word to PDF",
+      value: "word-to-pdf",
+      category: "Convert PDF",
+      description: "Convert Word documents (.docx) into PDF format",
+      path: "/word-to-pdf",
+    },
 
     // Organize PDF
     {
@@ -49,21 +63,6 @@ const Dashboard = () => {
     },
 
     // Convert PDF
-
-    {
-      name: "PDF to Word",
-      value: "pdf-to-word",
-      category: "Convert PDF",
-      description: "Convert PDFs into editable Word documents (.docx)",
-      path: "/pdf-to-word",
-    },
-    {
-      name: "Word to PDF",
-      value: "word-to-pdf",
-      category: "Convert PDF",
-      description: "Convert Word documents (.docx) into PDF format",
-      path: "/word-to-pdf",
-    },
     {
       name: "JPG to PDF",
       value: "jpg-to-pdf",
