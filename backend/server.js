@@ -509,12 +509,21 @@ except Exception as e:
   print(f'ERROR: {str(e)}')
   sys.exit(1)
 `;
-      const result = await execAsync(`python -c "${pythonScript.replace(/"/g, '\\"')}"`);
+      const result = await execAsync(
+        `python -c "${pythonScript.replace(/"/g, '\\"')}"`,
+      );
       if (result.stdout.includes("SUCCESS")) {
-        if (!fs.existsSync(outputPath)) throw new Error("Output file not created");
+        if (!fs.existsSync(outputPath))
+          throw new Error("Output file not created");
         const docx = fs.readFileSync(outputPath);
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-        res.setHeader("Content-Disposition", 'attachment; filename="converted.docx"');
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        );
+        res.setHeader(
+          "Content-Disposition",
+          'attachment; filename="converted.docx"',
+        );
         return res.send(docx);
       }
     } catch (pythonErr) {
@@ -523,12 +532,15 @@ except Exception as e:
 
     // Fallback: error message
     return res.status(503).json({
-      error: "PDF to Word conversion unavailable",
-      details: "This feature requires Python with pdf2docx library. Not available on Render free tier. Upgrade to Starter ($7/month) or use a dedicated conversion service.",
+      error: "Under process , Thankyou for using our services",
+      details:
+        "This feature requires Python with pdf2docx library. Not available on Render free tier. Upgrade to Starter ($7/month) or use a dedicated conversion service.",
     });
   } catch (error) {
     console.error("PDF to Word error:", error);
-    res.status(500).json({ error: error.message || "Failed to convert PDF to Word" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to convert PDF to Word" });
   } finally {
     try {
       if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);

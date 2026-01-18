@@ -8,6 +8,7 @@ import SplitPage from "./components/SplitPage";
 import ConvertPage from "./components/ConvertPage";
 import OrganizePage from "./components/OrganizePage";
 import SecurityPage from "./components/SecurityPage";
+import PDFToWordPage from "./components/PDFToWordPage";
 import AboutPage from "./components/AboutPage";
 import FAQPage from "./components/FAQPage";
 import SEO from "./components/SEO";
@@ -52,6 +53,7 @@ function App({ Router = BrowserRouter }) {
               <Route path="/merge-pdf" element={<MergePage />} />
               <Route path="/split-pdf" element={<SplitPage />} />
               <Route path="/convert-pdf" element={<ConvertPage />} />
+              <Route path="/pdf-to-word" element={<PDFToWordPage />} />
               <Route path="/organize-pdf" element={<OrganizePage />} />
               <Route path="/pdf-security" element={<SecurityPage />} />
               <Route path="/about" element={<AboutPage />} />
