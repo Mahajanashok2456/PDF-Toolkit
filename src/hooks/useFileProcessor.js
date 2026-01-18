@@ -123,6 +123,10 @@ const useFileProcessor = () => {
         downloadName = "organized.pdf";
       } else if (selectedTool === "jpg-to-pdf") {
         downloadName = "converted.pdf";
+      } else if (selectedTool === "pdf-to-word") {
+        downloadName = "converted.docx";
+      } else if (selectedTool === "word-to-pdf") {
+        downloadName = "converted.pdf";
       } else if (selectedTool === "protect-pdf") {
         downloadName = "protected.pdf";
       } else {
