@@ -1,15 +1,9 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/server.js" }
-  ],
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/server.js" }],
   "functions": {
     "api/server.js": {
       "maxDuration": 30,
       "memory": 512
-    },
-    "api/index.py": {
-      "maxDuration": 60,
-      "memory": 1024
     }
   },
   "build": {
