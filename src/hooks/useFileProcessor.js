@@ -92,6 +92,19 @@ const useFileProcessor = () => {
           ? "http://localhost:3001"
           : window.location.origin);
 
+      // Debug logging
+      console.log(
+        `[${selectedTool}] Sending to: ${apiUrl}/api/${selectedTool}`,
+      );
+      console.log(`[${selectedTool}] Field name: ${field}`);
+      console.log(
+        `[${selectedTool}] FormData entries:`,
+        Array.from(formData.entries()).map(([k, v]) => [
+          k,
+          v instanceof File ? `File(${v.name})` : v,
+        ]),
+      );
+
       const response = await fetch(`${apiUrl}/api/${selectedTool}`, {
         method: "POST",
         body: formData,

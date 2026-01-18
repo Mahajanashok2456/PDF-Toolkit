@@ -553,6 +553,7 @@ except Exception as e:
 
 // Word to PDF
 app.post("/api/word-to-pdf", upload.single("docx"), async (req, res) => {
+  console.log(`[word-to-pdf] Received request, file:`, req.file ? `${req.file.originalname} (${req.file.size} bytes)` : "NO FILE");
   const tempDir = path.join(__dirname, "temp");
   const inputPath = path.join(tempDir, `input-${uuidv4()}.docx`);
   const outputPath = path.join(tempDir, `output-${uuidv4()}.pdf`);
@@ -603,6 +604,24 @@ app.post("/api/word-to-pdf", upload.single("docx"), async (req, res) => {
       console.error("Cleanup error:", cleanupErr);
     }
   }
+});
+
+// Global error handler for multer and other errors
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.error(`Multer Error on ${req.path}:`, err.code, err.field, err.message);
+    if (err.code === "UNEXPECTED_FILE") {
+      return res.status(400).json({ 
+        error: `Unexpected field "${err.field}". Expected file field for this endpoint.` 
+      });
+    }
+    return res.status(400).json({ error: `Upload error: ${err.message}` });
+  }
+  if (err) {
+    console.error(`Error on ${req.path}:`, err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
+  }
+  next();
 });
 
 const PORT = process.env.PORT || 3001;
