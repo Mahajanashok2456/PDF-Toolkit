@@ -9,6 +9,7 @@ const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const mongoose = require("mongoose");
+const { encrypt } = require("node-qpdf2");
 
 const app = express();
 
@@ -313,8 +314,12 @@ app.post("/api/organize-pdf", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// Protect PDF with password (uses pdf-encrypt AES-256 encryption)
+// Protect PDF with password (uses node-qpdf2 for encryption)
 app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
+  const tempDir = path.join(__dirname, "temp");
+  const inputPath = path.join(tempDir, `input-${uuidv4()}.pdf`);
+  const outputPath = path.join(tempDir, `output-${uuidv4()}.pdf`);
+
   try {
     if (!req.file) return res.status(400).json({ error: "PDF file required" });
     const { password } = req.body;
@@ -322,35 +327,32 @@ app.post("/api/protect-pdf", upload.single("pdf"), async (req, res) => {
       return res.status(400).json({ error: "Password is required" });
     }
 
-    // Load PDF and re-create with encryption using pdf-lib
-    const pdfDoc = await PDFDocument.load(req.file.buffer);
-    const encryptedPdf = await pdfDoc.save();
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    fs.writeFileSync(inputPath, req.file.buffer);
 
-    // Use pdfkit to add encryption
-    const doc = new PDFKitDocument({
-      bufferPages: true,
-      userPassword: password,
-      ownerPassword: password,
-      encryption: {
-        V: 2,
-        R: 3,
-        O: Buffer.from(password).toString("hex").padEnd(32, "0").slice(0, 32),
-        U: Buffer.from(password).toString("hex").padEnd(32, "0").slice(0, 32),
-        P: -1,
-      },
+    await encrypt(inputPath, {
+      outputFile: outputPath,
+      password: password,
+      keyLength: 256,
     });
 
-    // For simplicity, just return the original PDF with password placeholder
-    // A proper implementation would need to re-render the PDF with encryption
+    const encrypted = fs.readFileSync(outputPath);
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
       'attachment; filename="protected.pdf"',
     );
-    res.send(encryptedPdf);
+    res.send(encrypted);
   } catch (error) {
     console.error("Protect error:", error);
     res.status(500).json({ error: error.message || "Failed to protect PDF" });
+  } finally {
+    try {
+      if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    } catch (cleanupError) {
+      console.error("Cleanup error:", cleanupError);
+    }
   }
 });
 
