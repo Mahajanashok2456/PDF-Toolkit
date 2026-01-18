@@ -49,13 +49,7 @@ const Dashboard = () => {
     },
 
     // Convert PDF
-    {
-      name: "PDF to Word",
-      value: "pdf-to-word",
-      category: "Convert PDF",
-      description: "Convert PDF to editable Word document",
-      path: "/convert-pdf?tool=pdf-to-word",
-    },
+
     {
       name: "JPG to PDF",
       value: "jpg-to-pdf",

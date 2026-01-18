@@ -93,15 +93,6 @@ const useFileProcessor = () => {
           ? "http://localhost:3001"
           : "");
 
-      // In local development, route Python requests to port 3002
-      if (
-        selectedTool === "pdf-to-word" &&
-        window.location.hostname === "localhost" &&
-        !process.env.REACT_APP_API_URL
-      ) {
-        apiUrl = "http://localhost:3002";
-      }
-
       const response = await fetch(`${apiUrl}/api/${selectedTool}`, {
         method: "POST",
         body: formData,
@@ -121,8 +112,6 @@ const useFileProcessor = () => {
       let downloadName;
       if (selectedTool === "convert") {
         downloadName = "converted.txt";
-      } else if (selectedTool === "pdf-to-word") {
-        downloadName = "converted.docx";
       } else if (selectedTool === "compress") {
         downloadName = "compressed.pdf";
       } else if (selectedTool === "rotate") {
